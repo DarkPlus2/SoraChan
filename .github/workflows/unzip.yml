@@ -1,0 +1,37 @@
+name: Unzip SoraChan.zip
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'SoraChan.zip'
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip (overwrite)
+        run: |
+          if [ ! -f SoraChan.zip ]; then
+            echo "Put SoraChan.zip in the root of this repo first"
+            exit 1
+          fi
+          unzip -o SoraChan.zip
+          if [ -d SoraChan ]; then
+            cp -rf SoraChan/. .
+            rm -rf SoraChan
+          fi
+          echo "Done. Files extracted (existing files replaced)."
+          ls -la
+
+      - name: Commit extracted files back to repo (optional)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "Unzip SoraChan.zip (overwrite)"
+          git push || echo "Push skipped (needs contents: write permission)"
+        continue-on-error: true
