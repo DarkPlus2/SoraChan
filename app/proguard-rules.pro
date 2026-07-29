@@ -1,0 +1,3 @@
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep class com.megaultimatesorachan.ai.ai.** { *; }
