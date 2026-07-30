@@ -13,25 +13,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip (overwrite)
+      - name: Clean + Unzip overwrite
         run: |
           if [ ! -f SoraChan.zip ]; then
-            echo "Put SoraChan.zip in the root of this repo first"
+            echo "Put SoraChan.zip in repo root first"
             exit 1
           fi
-          unzip -o SoraChan.zip
-          if [ -d SoraChan ]; then
-            cp -rf SoraChan/. .
-            rm -rf SoraChan
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name 'SoraChan.zip' \
+            ! -name '.git' \
+            ! -name '.github' \
+            -exec rm -rf {} +
+          rm -rf /tmp/sora_extract
+          mkdir -p /tmp/sora_extract
+          unzip -o SoraChan.zip -d /tmp/sora_extract
+          if [ -d /tmp/sora_extract/SoraChan ]; then
+            cp -rf /tmp/sora_extract/SoraChan/. .
+          else
+            cp -rf /tmp/sora_extract/. .
           fi
-          echo "Done. Files extracted (existing files replaced)."
+          rm -rf SoraChan
+          echo "Unzip done"
           ls -la
-
-      - name: Commit extracted files back to repo (optional)
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add -A
-          git diff --staged --quiet || git commit -m "Unzip SoraChan.zip (overwrite)"
-          git push || echo "Push skipped (needs contents: write permission)"
-        continue-on-error: true
+          head -20 app/src/main/java/com/megaultimatesorachan/ai/MainActivity.kt || true

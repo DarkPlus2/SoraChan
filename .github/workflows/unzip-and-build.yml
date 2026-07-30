@@ -13,23 +13,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip project (overwrite existing files)
+      - name: Clean old project files (keep only zip + git)
+        run: |
+          echo "=== Before clean ==="
+          ls -la
+          # Delete everything except SoraChan.zip, .git, and this workflow folder temporarily
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name 'SoraChan.zip' \
+            ! -name '.git' \
+            ! -name '.github' \
+            -exec rm -rf {} +
+          echo "=== After clean ==="
+          ls -la
+
+      - name: Unzip project (force overwrite)
         run: |
           if [ ! -f SoraChan.zip ]; then
             echo "ERROR: SoraChan.zip not found in repo root"
-            echo "Please upload SoraChan.zip to the root of the repository"
             exit 1
           fi
-          echo "Unzipping SoraChan.zip (overwrite mode)..."
-          unzip -o SoraChan.zip
-          # If zip contains a top-level SoraChan/ folder, move contents to root
-          if [ -d SoraChan ]; then
-            echo "Moving files from SoraChan/ to repo root..."
-            cp -rf SoraChan/. .
-            rm -rf SoraChan
+          echo "Zip size: $(du -h SoraChan.zip)"
+          # Force extract to a temp folder first
+          rm -rf /tmp/sora_extract
+          mkdir -p /tmp/sora_extract
+          unzip -o SoraChan.zip -d /tmp/sora_extract
+          echo "=== Extracted structure ==="
+          find /tmp/sora_extract -maxdepth 3 -type f | head -30
+
+          # If zip has top-level SoraChan/, use that; else use extract root
+          if [ -d /tmp/sora_extract/SoraChan ]; then
+            SRC=/tmp/sora_extract/SoraChan
+          else
+            SRC=/tmp/sora_extract
           fi
-          echo "Unzip complete. Project structure:"
-          find . -maxdepth 3 -type f | head -40
+
+          echo "Copying from $SRC to repo root..."
+          cp -rf "$SRC"/. .
+          # Keep the zip in root for next runs
+          # Remove nested junk if any
+          rm -rf SoraChan
+
+          echo "=== Repo root after unzip ==="
+          ls -la
+          echo "=== MainActivity check ==="
+          if [ -f app/src/main/java/com/megaultimatesorachan/ai/MainActivity.kt ]; then
+            echo "MainActivity EXISTS"
+            sed -n '1,30p' app/src/main/java/com/megaultimatesorachan/ai/MainActivity.kt
+          else
+            echo "ERROR: MainActivity.kt missing after unzip!"
+            find . -name "MainActivity.kt" || true
+            exit 1
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
